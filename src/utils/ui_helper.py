@@ -47,5 +47,5 @@ def display_item_cards(items, title):
                             </a>
                         </div>
                         """, 
-                        unsafe_html=True
+                        unsafe_allow_html=True
                     )
