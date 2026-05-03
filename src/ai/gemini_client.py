@@ -10,7 +10,7 @@ class GeminiClient:
         # Google Search Tool (Grounding) を有効化
         self.model = genai.GenerativeModel(
             model_name=self.model_name,
-            tools=[{"google_search_retrieval": {}}]
+            tools=[{"google_search": {}}]
         )
 
     def identify_item(self, image: Image.Image) -> str:
