@@ -1,6 +1,11 @@
 from playwright.sync_api import sync_playwright
 import urllib.parse
-import time
+import sys
+import os
+
+# プロジェクトルートをパスに追加してインポートできるようにする
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from config import MERCARI_SEARCH_URL, MERCARI_USER_AGENT, MERCARI_VIEWPORT, SELECTORS
 
 class MercariCrawler:
     def __init__(self, headless: bool = True):
@@ -15,31 +20,30 @@ class MercariCrawler:
         with sync_playwright() as p:
             browser = p.chromium.launch(headless=self.headless)
             context = browser.new_context(
-                viewport={'width': 1280, 'height': 1600},
-                user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+                viewport=MERCARI_VIEWPORT,
+                user_agent=MERCARI_USER_AGENT
             )
             page = context.new_page()
             
-            url = f"https://jp.mercari.com/search?keyword={urllib.parse.quote(keyword)}&sort=created_time&order=desc"
+            url = MERCARI_SEARCH_URL.format(keyword=urllib.parse.quote(keyword))
             
             try:
                 # ページ遷移と待機
                 page.goto(url, wait_until="networkidle", timeout=60000)
-                time.sleep(3)
                 
-                # スクロールして要素を確定させる
+                # スクロールして要素を確定させる (負荷を避けるためにロード状態を確認)
                 for _ in range(2):
                     page.mouse.wheel(0, 2000)
-                    time.sleep(1)
+                    page.wait_for_load_state("domcontentloaded")
                 
-                selector = '[data-testid="item-cell"]'
+                selector = SELECTORS["item_cell"]
                 page.wait_for_selector(selector, timeout=20000)
                 
                 # 取得処理
                 added = 0
                 limit = 25
                 
-                # 要素が動的に増える可能性があるため、ループ内で再取得を考慮
+                # 要素を再取得
                 all_items = page.query_selector_all(selector)
                 
                 for item in all_items:
@@ -47,10 +51,11 @@ class MercariCrawler:
                         break
                     
                     try:
-                        price_el = item.query_selector('span[class*="number"]')
-                        title_el = item.query_selector('[class*="itemName"]')
-                        img_el = item.query_selector('img')
-                        link_el = item.query_selector('a')
+                        # query_selector はタイムアウトなしで要素を探すためそのまま使用
+                        price_el = item.query_selector(SELECTORS["price"])
+                        title_el = item.query_selector(SELECTORS["title"])
+                        img_el = item.query_selector(SELECTORS["image"])
+                        link_el = item.query_selector(SELECTORS["link"])
                         
                         if price_el and title_el and img_el and link_el:
                             price_text = price_el.inner_text().replace(',', '').replace('¥', '').strip()
@@ -73,6 +78,7 @@ class MercariCrawler:
                                     "link": link,
                                     "is_sold": is_sold
                                 })
+                                added += 1
                     except Exception:
                         continue
                         

@@ -2,8 +2,13 @@ import streamlit as st
 import os
 from dotenv import load_dotenv
 from PIL import Image
+import sys
+
+# プロジェクトルートをパスに追加してインポートできるようにする
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from ai.gemini_client import GeminiClient
 from crawler.mercari_crawler import MercariCrawler
+from utils.ui_helper import display_item_cards
 
 # 環境変数の読み込み
 load_dotenv()
@@ -22,51 +27,6 @@ def parse_keywords(ai_result: str) -> str:
     if "【検索キーワード】:" in ai_result:
         return ai_result.split("【検索キーワード】:")[1].strip()
     return ""
-
-def display_item_cards(items, title, initial_limit=25):
-    """商品をカード形式で表示する (5列グリッド)"""
-    if not items:
-        return
-
-    st.write(f"#### {title}")
-    
-    # 取得件数制限 (上位25件)
-    items_to_display = items[:initial_limit]
-    
-    # グリッド表示 (1行5列)
-    cols_per_row = 5
-    for i in range(0, len(items_to_display), cols_per_row):
-        cols = st.columns(cols_per_row)
-        for j in range(cols_per_row):
-            idx = i + j
-            if idx < len(items_to_display):
-                item = items_to_display[idx]
-                with cols[j]:
-                    is_sold = item.get("is_sold")
-                    # 高コントラストな配色 (ダークモード・ライトモード両対応を意識)
-                    price_color = "#FF3B30" if is_sold else "#007AFF" # 鮮やかな赤 または 鮮やかな青
-                    
-                    # SOLDバッジのHTML
-                    sold_badge = f'<div style="position: absolute; top: 0; left: 0; background-color: #FF3B30; color: white; padding: 2px 8px; border-radius: 8px 0 8px 0; font-weight: bold; font-size: 13px; z-index: 10;">SOLD</div>' if is_sold else ''
-                    
-                    # カード全体を1つのHTMLブロックとして構成 (表示崩れと</a>漏れを防止)
-                    st.markdown(
-                        f"""
-                        <div style="margin-bottom: 20px; width: 100%;">
-                            <a href="{item["link"]}" target="_blank" style="text-decoration: none; color: inherit;">
-                                <div style="position: relative; width: 100%; aspect-ratio: 1/1; margin-bottom: 8px; overflow: hidden; border-radius: 8px;">
-                                    <img src="{item["image"]}" style="width: 100%; height: 100%; object-fit: cover; {'opacity: 0.7;' if is_sold else ''}">
-                                    {sold_badge}
-                                </div>
-                                <div style="padding: 0 2px;">
-                                    <p style="color: {price_color}; font-size: 20px; font-weight: 900; margin: 0; line-height: 1.2;">¥{item["price"]:,}</p>
-                                    <p style="font-size: 12px; line-height: 1.4; height: 2.8em; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; margin: 4px 0 0 0; opacity: 0.9;">{item.get("title", "名称未設定")}</p>
-                                </div>
-                            </a>
-                        </div>
-                        """, 
-                        unsafe_allow_html=True
-                    )
 
 st.title("🔍 AI商品価格トラッカー")
 
