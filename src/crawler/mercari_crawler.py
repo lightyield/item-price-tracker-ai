@@ -25,31 +25,41 @@ class MercariCrawler:
             
             # カテゴリごとに個別に取得
             for category in ["on_sale", "sold_out"]:
-                status_id = "1" if category == "on_sale" else "2%2C3"
-                url = f"https://jp.mercari.com/search?keyword={urllib.parse.quote(keyword)}&status_id={status_id}"
+                # パラメータを最新の文字列形式に更新
+                status_param = "on_sale" if category == "on_sale" else "trading%2Csold_out"
+                url = f"https://jp.mercari.com/search?keyword={urllib.parse.quote(keyword)}&status_id={status_param}"
                 
                 try:
                     page.goto(url, wait_until="load", timeout=45000)
                     page.wait_for_load_state("networkidle")
                     time.sleep(3)
                     
-                    # より多くの商品を読み込むためにスクロール
-                    # 1回スクロールして追加要素を読み込ませる
-                    for _ in range(2):
-                        page.mouse.wheel(0, 2000)
+                    # より多くの商品を読み込むためにスクロールを強化
+                    for _ in range(4): # 2回から4回に増加
+                        page.mouse.wheel(0, 3000)
                         time.sleep(1.5)
                     
                     selector = '[data-testid="item-cell"]'
                     page.wait_for_selector(selector, timeout=15000)
                     items = page.query_selector_all(selector)
                     
-                    # 取得件数を50件に増やす
                     limit = 50
                     added = 0
                     for item in items:
                         if added >= limit: break
                         
                         try:
+                            # 実際に売り切れかどうかを確認するロジックを追加
+                            # メルカリのアイテムセルには SOLD の情報が含まれる
+                            item_text = item.inner_text()
+                            is_item_sold = "SOLD" in item_text or "売り切れ" in item_text
+                            
+                            # カテゴリと一致しない場合はスキップ（混在対策）
+                            if category == "sold_out" and not is_item_sold:
+                                continue
+                            if category == "on_sale" and is_item_sold:
+                                continue
+
                             price_el = item.query_selector('span[class*="number"]')
                             title_el = item.query_selector('[class*="itemName"]')
                             img_el = item.query_selector('img')
