@@ -122,7 +122,12 @@ with col_right:
             with st.expander("AI分析の詳細結果を表示", expanded=True):
                 # 結果を見やすく整形
                 raw_result = st.session_state["identification_result"]
-                formatted_result = raw_result.replace("【商品名】:", "**【商品名】**\n").replace("【説明】:", "\n\n**【説明】**\n").replace("【検索キーワード】:", "\n\n**【検索キーワード】**\n")
+                formatted_result = (
+                    raw_result.replace("【商品名】:", "**【商品名】**\n")
+                    .replace("【説明】:", "\n\n**【説明】**\n")
+                    .replace("【検索キーワード】:", "\n\n**【検索キーワード】**\n")
+                    .replace("【定価】:", "\n\n**【定価】**\n")
+                )
                 st.markdown(formatted_result)
             
             st.write("---")
