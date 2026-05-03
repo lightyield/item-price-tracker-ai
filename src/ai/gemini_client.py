@@ -40,8 +40,6 @@ class GeminiClient:
         【定価】: 
         (ここに調査した定価)
         """
-
-        """
         
         response = self.model.generate_content([prompt, image])
         return response.text
