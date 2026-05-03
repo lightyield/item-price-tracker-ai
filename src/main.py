@@ -23,23 +23,18 @@ def parse_keywords(ai_result: str) -> str:
         return ai_result.split("【検索キーワード】:")[1].strip()
     return ""
 
-def display_item_cards(items, title, initial_limit=10):
-    """商品をカード形式で表示し、「もっと見る」機能を提供する"""
+def display_item_cards(items, title, initial_limit=50):
+    """商品をカード形式で表示する (10列グリッド)"""
     if not items:
         return
 
     st.write(f"#### {title}")
     
-    # カテゴリごとに表示件数をセッション状態で管理
-    state_key = f"limit_{title.lower().replace(' ', '_')}"
-    if state_key not in st.session_state:
-        st.session_state[state_key] = initial_limit
-
-    current_limit = st.session_state[state_key]
-    items_to_display = items[:current_limit]
+    # 取得件数制限 (ユーザーの要望に合わせて上位50件)
+    items_to_display = items[:initial_limit]
     
-    # グリッド表示 (1行6列)
-    cols_per_row = 6
+    # グリッド表示 (1行10列)
+    cols_per_row = 10
     for i in range(0, len(items_to_display), cols_per_row):
         cols = st.columns(cols_per_row)
         for j in range(cols_per_row):
@@ -47,26 +42,30 @@ def display_item_cards(items, title, initial_limit=10):
             if idx < len(items_to_display):
                 item = items_to_display[idx]
                 with cols[j]:
-                    # サムネイルをリンクとして表示
+                    # サムネイルをリンクとして表示 (売り切れの場合はSOLDラベルを重畳表示風にする)
+                    img_style = "width:100%; border-radius:5px;"
+                    if item.get("is_sold"):
+                        img_style += " border: 2px solid red; opacity: 0.7;"
+                    
                     st.markdown(
                         f'<a href="{item["link"]}" target="_blank">'
-                        f'<img src="{item["image"]}" style="width:100%; border-radius:5px;">'
+                        f'<div style="position: relative;">'
+                        f'<img src="{item["image"]}" style="{img_style}">'
+                        + (f'<div style="position: absolute; top: 0; left: 0; background: red; color: white; font-size: 10px; padding: 2px; border-radius: 3px;">SOLD</div>' if item.get("is_sold") else '') +
+                        f'</div>'
                         f'</a>', 
                         unsafe_allow_html=True
                     )
+                    
+                    # 価格
+                    price_color = "red" if item.get("is_sold") else "black"
+                    st.write(f'<p style="font-size: 14px; margin-bottom: 0; color: {price_color};">**¥{item["price"]:,}**</p>', unsafe_allow_html=True)
+                    
                     # 商品名 (長すぎる場合は省略)
                     display_title = item.get("title", "名称未設定")
-                    if len(display_title) > 25:
-                        display_title = display_title[:22] + "..."
+                    if len(display_title) > 15:
+                        display_title = display_title[:12] + "..."
                     st.caption(display_title)
-                    # 価格
-                    st.write(f"**¥{item['price']:,}**")
-
-    # もっと見るボタン
-    if len(items) > current_limit:
-        if st.button(f"さらに表示 ({title})", key=f"btn_{state_key}"):
-            st.session_state[state_key] += 10
-            st.rerun()
 
 st.title("🔍 AI商品価格トラッカー")
 
@@ -100,7 +99,7 @@ with col_left:
 
 with col_right:
     if uploaded_file is not None:
-        st.subheader("2. 商品の特定・キーワード調整")
+        st.subheader("2. 商品の特定結果")
         
         # 自動商品分析
         if "identification_result" not in st.session_state:
@@ -117,7 +116,7 @@ with col_right:
                     except Exception as e:
                         st.error(f"分析中にエラーが発生しました: {e}")
 
-        # 分析結果とキーワード調整
+        # 分析結果
         if "identification_result" in st.session_state:
             with st.expander("AI分析の詳細結果を表示", expanded=True):
                 # 結果を見やすく整形
@@ -129,73 +128,46 @@ with col_right:
                     .replace("【定価】:", "\n\n**【定価】**\n")
                 )
                 st.markdown(formatted_result)
-            
-            st.write("---")
-            # ユーザーによるキーワード編集
-            search_keywords = st.text_input(
-                "市場調査に使用するキーワード:", 
-                value=st.session_state.get("search_keywords", "")
-            )
-            # 変更を保存
-            st.session_state["search_keywords"] = search_keywords
-            
-            if st.button("メルカリで相場を検索", use_container_width=True):
-                if not search_keywords:
-                    st.error("検索キーワードを入力してください。")
-                else:
-                    with st.spinner(f"検索中: {search_keywords}..."):
-                        try:
-                            crawler = MercariCrawler(headless=True)
-                            results = crawler.search_prices(search_keywords)
-                            
-                            if results["on_sale"] or results["sold_out"]:
-                                st.session_state["market_results"] = results
-                                # 新規検索時は表示件数をリセット
-                                st.session_state.pop("limit_販売中", None)
-                                st.session_state.pop("limit_売り切れ", None)
-                                st.success(f"「{search_keywords}」の相場データを取得しました！")
-                            else:
-                                st.warning(f"「{search_keywords}」に該当する商品は見つかりませんでした。")
-                        except Exception as e:
-                            st.error(f"検索中にエラーが発生しました: {e}")
 
-# 4. 相場分析結果 (全幅)
+# 3. 検索キーワードの調整 (全幅)
+if uploaded_file is not None and "identification_result" in st.session_state:
+    st.divider()
+    st.subheader("3. 検索キーワードの調整")
+    # ユーザーによるキーワード編集
+    search_keywords = st.text_input(
+        "市場調査に使用するキーワード:", 
+        value=st.session_state.get("search_keywords", "")
+    )
+    # 変更を保存
+    st.session_state["search_keywords"] = search_keywords
+    
+    if st.button("メルカリで相場を検索", use_container_width=True):
+        if not search_keywords:
+            st.error("検索キーワードを入力してください。")
+        else:
+            with st.spinner(f"検索中: {search_keywords}..."):
+                try:
+                    crawler = MercariCrawler(headless=True)
+                    results = crawler.search_prices(search_keywords)
+                    
+                    if results:
+                        st.session_state["market_results"] = results
+                        st.success(f"「{search_keywords}」の検索データを取得しました！")
+                    else:
+                        st.warning(f"「{search_keywords}」に該当する商品は見つかりませんでした。")
+                except Exception as e:
+                    st.error(f"検索中にエラーが発生しました: {e}")
+
+# 4. 市場調査結果 (全幅)
 if "market_results" in st.session_state:
     st.divider()
     results = st.session_state["market_results"]
-    on_sale = results.get("on_sale", [])
-    sold_out = results.get("sold_out", [])
     
-    st.subheader("📊 市場分析結果 (メルカリ)")
-    
-    # 売り切れの状況 (サマリーを上に)
-    if sold_out:
-        sold_prices = [item["price"] for item in sold_out]
-        avg_sold = sum(sold_prices) / len(sold_prices)
-        m_col1, m_col2, m_col3 = st.columns(3)
-        m_col1.metric("平均販売価格", f"¥{int(avg_sold):,}")
-        m_col2.metric("最安値", f"¥{min(sold_prices):,}")
-        m_col3.metric("最高値", f"¥{max(sold_prices):,}")
-        
-        st.line_chart(sold_prices)
-
-    # タブで表示を切り替え
-    tab1, tab2 = st.tabs([f"販売中 ({len(on_sale)})", f"売り切れ ({len(sold_out)})"])
-    
-    with tab1:
-        if on_sale:
-            on_sale_prices = [item["price"] for item in on_sale]
-            avg_on_sale = sum(on_sale_prices) / len(on_sale_prices)
-            st.info(f"出品中の平均価格: ¥{int(avg_on_sale):,}")
-            display_item_cards(on_sale, "販売中")
-        else:
-            st.warning("現在販売中の商品はありません。")
-
-    with tab2:
-        if sold_out:
-            display_item_cards(sold_out, "売り切れ")
-        else:
-            st.warning("販売実績は見つかりませんでした。")
+    if results:
+        st.subheader(f"📊 メルカリ検索結果 (上位 {len(results)} 件)")
+        display_item_cards(results, "最新の出品状況")
+    else:
+        st.warning("検索結果が見つかりませんでした。")
 
 
 st.divider()
