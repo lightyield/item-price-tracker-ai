@@ -24,7 +24,7 @@ def parse_keywords(ai_result: str) -> str:
     return ""
 
 def display_item_cards(items, title, initial_limit=25):
-    """商品をカード形式で表示する (5列グリッド)"""
+    """商品をカード形式で表示する (5列グリッド、高コントラスト設計)"""
     if not items:
         return
 
@@ -42,29 +42,45 @@ def display_item_cards(items, title, initial_limit=25):
             if idx < len(items_to_display):
                 item = items_to_display[idx]
                 with cols[j]:
-                    # サムネイルをリンクとして表示 (売り切れの場合はSOLDラベルを重畳表示)
-                    img_style = "width:100%; border-radius:5px;"
-                    if item.get("is_sold"):
-                        img_style += " border: 2px solid red; opacity: 0.7;"
+                    # 商品の状態に応じたスタイル設定
+                    is_sold = item.get("is_sold")
+                    price_color = "#E60000" if is_sold else "#000000" # 鮮やかな赤、または真っ黒
+                    bg_color = "#F8F9FA" # 非常に薄いグレーの背景
+                    border_color = "#DEE2E6"
                     
+                    # カード全体のコンテナ
                     st.markdown(
-                        f'<a href="{item["link"]}" target="_blank">'
-                        f'<div style="position: relative;">'
-                        f'<img src="{item["image"]}" style="{img_style}">'
-                        + (f'<div style="position: absolute; top: 0; left: 0; background: red; color: white; font-size: 12px; padding: 3px 6px; border-radius: 3px; font-weight: bold;">SOLD</div>' if item.get("is_sold") else '') +
-                        f'</div>'
-                        f'</a>', 
-                        unsafe_allow_html=True
-                    )
-                    
-                    # 価格 (独立した行で表示)
-                    price_color = "red" if item.get("is_sold") else "black"
-                    st.markdown(f'<p style="font-size: 18px; font-weight: bold; margin-bottom: 0; color: {price_color};">¥{item["price"]:,}</p>', unsafe_allow_html=True)
-                    
-                    # 商品名 (2行まで表示、それ以上は省略)
-                    display_title = item.get("title", "名称未設定")
-                    st.markdown(
-                        f'<p style="font-size: 12px; color: #666; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; line-height: 1.4; height: 2.8em;">{display_title}</p>', 
+                        f"""
+                        <div style="
+                            background-color: {bg_color}; 
+                            border: 1px solid {border_color}; 
+                            border-radius: 8px; 
+                            padding: 8px; 
+                            margin-bottom: 15px;
+                            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+                        ">
+                            <a href="{item["link"]}" target="_blank" style="text-decoration: none;">
+                                <div style="position: relative; width: 100%; aspect-ratio: 1/1; overflow: hidden; border-radius: 4px;">
+                                    <img src="{item["image"]}" style="width: 100%; height: 100%; object-fit: cover; {'opacity: 0.7;' if is_sold else ''}">
+                                    {f'<div style="position: absolute; top: 5px; left: 5px; background: #E60000; color: white; font-size: 11px; padding: 2px 6px; border-radius: 3px; font-weight: bold; z-index: 1;">SOLD</div>' if is_sold else ''}
+                                </div>
+                                <div style="margin-top: 8px;">
+                                    <p style="font-size: 18px; font-weight: 800; margin: 0; color: {price_color};">¥{item["price"]:,}</p>
+                                    <p style="
+                                        font-size: 11px; 
+                                        color: #495057; 
+                                        margin-top: 4px; 
+                                        overflow: hidden; 
+                                        display: -webkit-box; 
+                                        -webkit-line-clamp: 2; 
+                                        -webkit-box-orient: vertical; 
+                                        line-height: 1.3; 
+                                        height: 2.6em;
+                                    ">{item.get("title", "名称未設定")}</p>
+                                </div>
+                            </a>
+                        </div>
+                        """, 
                         unsafe_allow_html=True
                     )
 
@@ -148,12 +164,15 @@ if uploaded_file is not None and "identification_result" in st.session_state:
         else:
             with st.spinner(f"検索中: {search_keywords}..."):
                 try:
+                    # 検索前に結果をクリア
+                    st.session_state.pop("market_results", None)
                     crawler = MercariCrawler(headless=True)
                     results = crawler.search_prices(search_keywords)
                     
                     if results:
                         st.session_state["market_results"] = results
-                        st.success(f"「{search_keywords}」の検索データを取得しました！")
+                        st.success(f"「{search_keywords}」の検索データを {len(results)} 件取得しました！")
+                        st.rerun() # 確実に表示を更新
                     else:
                         st.warning(f"「{search_keywords}」に該当する商品は見つかりませんでした。")
                 except Exception as e:

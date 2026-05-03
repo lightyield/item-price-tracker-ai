@@ -20,25 +20,30 @@ class MercariCrawler:
             )
             page = context.new_page()
             
-            url = f"https://jp.mercari.com/search?keyword={urllib.parse.quote(keyword)}"
-            
-            try:
-                page.goto(url, wait_until="load", timeout=45000)
-                page.wait_for_load_state("networkidle")
+                url = f"https://jp.mercari.com/search?keyword={urllib.parse.quote(keyword)}"
+                
+                # ページ遷移と待機
+                page.goto(url, wait_until="networkidle", timeout=60000)
                 time.sleep(3)
                 
-                # スクロールして追加読み込み
-                for _ in range(3):
-                    page.mouse.wheel(0, 3000)
-                    time.sleep(1.5)
+                # スクロールして要素を確定させる
+                for _ in range(2):
+                    page.mouse.wheel(0, 2000)
+                    time.sleep(1)
                 
                 selector = '[data-testid="item-cell"]'
-                page.wait_for_selector(selector, timeout=15000)
-                items = page.query_selector_all(selector)
+                page.wait_for_selector(selector, timeout=20000)
                 
+                # 取得処理
+                added = 0
                 limit = 25
-                for item in items:
-                    if len(results) >= limit: break
+                
+                # 要素が動的に増える可能性があるため、ループ内で再取得を考慮
+                all_items = page.query_selector_all(selector)
+                
+                for item in all_items:
+                    if added >= limit:
+                        break
                     
                     try:
                         price_el = item.query_selector('span[class*="number"]')
