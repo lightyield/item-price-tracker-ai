@@ -20,8 +20,9 @@ class MercariCrawler:
             )
             page = context.new_page()
             
-                url = f"https://jp.mercari.com/search?keyword={urllib.parse.quote(keyword)}"
-                
+            url = f"https://jp.mercari.com/search?keyword={urllib.parse.quote(keyword)}&sort=created_time&order=desc"
+            
+            try:
                 # ページ遷移と待機
                 page.goto(url, wait_until="networkidle", timeout=60000)
                 time.sleep(3)
