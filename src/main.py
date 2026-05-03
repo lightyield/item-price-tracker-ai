@@ -23,18 +23,18 @@ def parse_keywords(ai_result: str) -> str:
         return ai_result.split("【検索キーワード】:")[1].strip()
     return ""
 
-def display_item_cards(items, title, initial_limit=50):
-    """商品をカード形式で表示する (10列グリッド)"""
+def display_item_cards(items, title, initial_limit=25):
+    """商品をカード形式で表示する (5列グリッド)"""
     if not items:
         return
 
     st.write(f"#### {title}")
     
-    # 取得件数制限 (ユーザーの要望に合わせて上位50件)
+    # 取得件数制限 (上位25件)
     items_to_display = items[:initial_limit]
     
-    # グリッド表示 (1行10列)
-    cols_per_row = 10
+    # グリッド表示 (1行5列)
+    cols_per_row = 5
     for i in range(0, len(items_to_display), cols_per_row):
         cols = st.columns(cols_per_row)
         for j in range(cols_per_row):
@@ -42,7 +42,7 @@ def display_item_cards(items, title, initial_limit=50):
             if idx < len(items_to_display):
                 item = items_to_display[idx]
                 with cols[j]:
-                    # サムネイルをリンクとして表示 (売り切れの場合はSOLDラベルを重畳表示風にする)
+                    # サムネイルをリンクとして表示 (売り切れの場合はSOLDラベルを重畳表示)
                     img_style = "width:100%; border-radius:5px;"
                     if item.get("is_sold"):
                         img_style += " border: 2px solid red; opacity: 0.7;"
@@ -51,21 +51,22 @@ def display_item_cards(items, title, initial_limit=50):
                         f'<a href="{item["link"]}" target="_blank">'
                         f'<div style="position: relative;">'
                         f'<img src="{item["image"]}" style="{img_style}">'
-                        + (f'<div style="position: absolute; top: 0; left: 0; background: red; color: white; font-size: 10px; padding: 2px; border-radius: 3px;">SOLD</div>' if item.get("is_sold") else '') +
+                        + (f'<div style="position: absolute; top: 0; left: 0; background: red; color: white; font-size: 12px; padding: 3px 6px; border-radius: 3px; font-weight: bold;">SOLD</div>' if item.get("is_sold") else '') +
                         f'</div>'
                         f'</a>', 
                         unsafe_allow_html=True
                     )
                     
-                    # 価格
+                    # 価格 (独立した行で表示)
                     price_color = "red" if item.get("is_sold") else "black"
-                    st.write(f'<p style="font-size: 14px; margin-bottom: 0; color: {price_color};">**¥{item["price"]:,}**</p>', unsafe_allow_html=True)
+                    st.markdown(f'<p style="font-size: 18px; font-weight: bold; margin-bottom: 0; color: {price_color};">¥{item["price"]:,}</p>', unsafe_allow_html=True)
                     
-                    # 商品名 (長すぎる場合は省略)
+                    # 商品名 (2行まで表示、それ以上は省略)
                     display_title = item.get("title", "名称未設定")
-                    if len(display_title) > 15:
-                        display_title = display_title[:12] + "..."
-                    st.caption(display_title)
+                    st.markdown(
+                        f'<p style="font-size: 12px; color: #666; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; line-height: 1.4; height: 2.8em;">{display_title}</p>', 
+                        unsafe_allow_html=True
+                    )
 
 st.title("🔍 AI商品価格トラッカー")
 

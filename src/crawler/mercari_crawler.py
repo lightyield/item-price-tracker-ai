@@ -36,7 +36,7 @@ class MercariCrawler:
                 page.wait_for_selector(selector, timeout=15000)
                 items = page.query_selector_all(selector)
                 
-                limit = 50
+                limit = 25
                 for item in items:
                     if len(results) >= limit: break
                     
