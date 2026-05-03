@@ -1,22 +1,23 @@
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 from PIL import Image
-import os
+import io
 
 class GeminiClient:
     def __init__(self, api_key: str):
-        genai.configure(api_key=api_key)
-        # Using the latest stable model found in the environment (2026-05)
-        self.model_name = 'models/gemini-2.5-flash'
-        # Google Search Tool (Grounding) を有効化
-        self.model = genai.GenerativeModel(
-            model_name=self.model_name,
-            tools=[{"google_search": {}}]
-        )
+        self.client = genai.Client(api_key=api_key)
+        # Using the latest stable model found in 2026
+        self.model_id = 'gemini-2.5-flash'
 
     def identify_item(self, image: Image.Image) -> str:
         """
         Identify the item in the image and return a description.
         """
+        # Convert PIL Image to bytes for the new SDK
+        img_byte_arr = io.BytesIO()
+        image.save(img_byte_arr, format='PNG')
+        img_bytes = img_byte_arr.getvalue()
+
         prompt = """
         この画像に写っている商品を特定してください。
         Google検索を活用して、できるだけ正確な情報を取得してください。
@@ -41,5 +42,20 @@ class GeminiClient:
         (ここに調査した定価)
         """
         
-        response = self.model.generate_content([prompt, image])
+        response = self.client.models.generate_content(
+            model=self.model_id,
+            contents=[
+                types.Part.from_bytes(data=img_bytes, mime_type='image/png'),
+                prompt
+            ],
+            config=types.GenerateContentConfig(
+                tools=[
+                    types.Tool(
+                        google_search=types.GoogleSearch()
+                    )
+                ],
+                temperature=0.7
+            )
+        )
+        
         return response.text
