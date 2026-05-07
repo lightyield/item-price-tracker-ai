@@ -2,7 +2,6 @@ import os
 
 # Gemini AI Settings
 # 優先度の高い順にモデルを並べます。
-# 以前の調査で存在が確認できた最新モデルのみをリストアップしています。
 GEMINI_MODELS = [
     'gemini-2.0-flash',
     'gemini-2.0-flash-lite',
@@ -49,7 +48,7 @@ DRAFT_PROMPT = """
 
 以下のガイドラインに従ってください：
 1. タイトルは40文字以内で、重要なキーワード（ブランド、型番、状態、送料無料など）を盛り込んでください。
-2. 商品説明は、商品の特徴、仕様、状態、そして購入を検討している人が知りたい情報を網羅してください。
+2. 商品説明は、商品の特徴、仕様、状態、転用購入を検討している人が知りたい情報を網羅してください。
 3. ハッシュタグを3〜5個含めてください。
 4. 丁寧で信頼感のある言葉遣い（です・ます調）を使用してください。
 
@@ -61,24 +60,13 @@ DRAFT_PROMPT = """
 (ここに商品説明)
 """
 
-# Mercari Crawler Settings
-MERCARI_BASE_URL = "https://jp.mercari.com"
-MERCARI_SEARCH_URL = f"{MERCARI_BASE_URL}/search?keyword={{keyword}}&sort=created_time&order=desc"
-MERCARI_USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-MERCARI_VIEWPORT = {'width': 1280, 'height': 1600}
-
-# Mercari Selectors
-SELECTORS = {
-    "item_cell": '[data-testid="item-cell"]',
-    "price": 'span[class*="number"]',
-    "title": '[class*="itemName"]',
-    "image": 'img',
-    "link": 'a'
+# Search URL Settings
+SEARCH_URLS = {
+    "mercari": "https://jp.mercari.com/search?keyword={keyword}&sort=created_time&order=desc",
+    "amazon": "https://www.amazon.co.jp/s?k={keyword}",
+    "yodobashi": "https://www.yodobashi.com/?word={keyword}"
 }
 
 # UI Settings
 ITEMS_LIMIT = 25
 COLS_PER_ROW = 5
-
-# Pricing Strategy
-SUGGESTED_PRICE_PERCENTILE = 50  # SOLD価格の中央値を推奨価格のベースにする

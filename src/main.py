@@ -9,6 +9,8 @@ import re
 # プロジェクトルートをパスに追加してインポートできるようにする
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from ai.gemini_client import GeminiClient
+from utils.parsers import parse_keywords, parse_list_price, parse_draft
+from config import SEARCH_URLS
 
 # 環境変数の読み込み
 load_dotenv()
@@ -21,32 +23,6 @@ st.set_page_config(
 
 # 環境変数からAPIキーを取得
 api_key = os.getenv("GEMINI_API_KEY", "")
-
-def parse_keywords(ai_result: str) -> str:
-    """AIの解析結果から検索キーワードを抽出する"""
-    if "【検索キーワード】:" in ai_result:
-        return ai_result.split("【検索キーワード】:")[1].strip()
-    return ""
-
-def parse_list_price(ai_result: str) -> str:
-    """AIの解析結果から定価の数値を抽出する"""
-    if "【定価】:" in ai_result:
-        price_text = ai_result.split("【定価】:")[1].strip()
-        # 数字以外の文字を削除
-        digits = re.sub(r'\D', '', price_text)
-        return digits
-    return ""
-
-def parse_draft(draft_text: str) -> tuple:
-    """生成されたドラフトテキストからタイトルと説明文を抽出する"""
-    title = ""
-    description = ""
-    if "【タイトル】:" in draft_text:
-        parts = draft_text.split("【タイトル】:")[1].split("【商品説明】:")
-        title = parts[0].strip()
-        if len(parts) > 1:
-            description = parts[1].strip()
-    return title, description
 
 st.title("🔍 AI商品価格トラッカー")
 
@@ -119,6 +95,17 @@ with col_right:
                 )
                 st.markdown(formatted_result)
 
+def open_url_in_new_tab(url: str):
+    """URLを新しいタブで開くためのJavaScriptを埋め込む"""
+    st.components.v1.html(
+        f"""
+        <script>
+            window.open("{url}", "_blank");
+        </script>
+        """,
+        height=0,
+    )
+
 # 3. 検索キーワードの調整と市場相場確認 (全幅)
 if uploaded_file is not None and "identification_result" in st.session_state:
     st.divider()
@@ -136,53 +123,19 @@ if uploaded_file is not None and "identification_result" in st.session_state:
     # ボタンを横に並べる
     col_btn1, col_btn2, col_btn3, _ = st.columns([1, 1, 1, 3])
     
+    encoded_keywords = urllib.parse.quote(st.session_state["search_keywords_widget"])
+
     with col_btn1:
-        # 「メルカリで開く」
         if st.button("🚀 メルカリ", type="primary", use_container_width=True):
-            encoded_keywords = urllib.parse.quote(st.session_state["search_keywords_widget"])
-            mercari_url = f"https://jp.mercari.com/search?keyword={encoded_keywords}&sort=created_time&order=desc"
-            
-            # JavaScriptを用いて新しいタブで開く
-            st.components.v1.html(
-                f"""
-                <script>
-                    window.open("{mercari_url}", "_blank");
-                </script>
-                """,
-                height=0,
-            )
+            open_url_in_new_tab(SEARCH_URLS["mercari"].format(keyword=encoded_keywords))
             
     with col_btn2:
-        # 「Amazonで開く」
         if st.button("📦 Amazon", use_container_width=True):
-            encoded_keywords = urllib.parse.quote(st.session_state["search_keywords_widget"])
-            amazon_url = f"https://www.amazon.co.jp/s?k={encoded_keywords}"
-            
-            # JavaScriptを用いて新しいタブで開く
-            st.components.v1.html(
-                f"""
-                <script>
-                    window.open("{amazon_url}", "_blank");
-                </script>
-                """,
-                height=0,
-            )
+            open_url_in_new_tab(SEARCH_URLS["amazon"].format(keyword=encoded_keywords))
 
     with col_btn3:
-        # 「ヨドバシで開く」
         if st.button("📷 ヨドバシ", use_container_width=True):
-            encoded_keywords = urllib.parse.quote(st.session_state["search_keywords_widget"])
-            yodobashi_url = f"https://www.yodobashi.com/?word={encoded_keywords}"
-            
-            # JavaScriptを用いて新しいタブで開く
-            st.components.v1.html(
-                f"""
-                <script>
-                    window.open("{yodobashi_url}", "_blank");
-                </script>
-                """,
-                height=0,
-            )
+            open_url_in_new_tab(SEARCH_URLS["yodobashi"].format(keyword=encoded_keywords))
 
     # 4. 出品価格の入力
     st.divider()
