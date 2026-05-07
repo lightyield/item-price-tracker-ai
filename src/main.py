@@ -134,11 +134,11 @@ if uploaded_file is not None and "identification_result" in st.session_state:
     )
 
     # ボタンを横に並べる
-    col_btn1, col_btn2, _ = st.columns([1, 1, 4])
+    col_btn1, col_btn2, col_btn3, _ = st.columns([1, 1, 1, 3])
     
     with col_btn1:
         # 「メルカリで開く」
-        if st.button("🚀 メルカリで開く", type="primary", use_container_width=True):
+        if st.button("🚀 メルカリ", type="primary", use_container_width=True):
             encoded_keywords = urllib.parse.quote(st.session_state["search_keywords_widget"])
             mercari_url = f"https://jp.mercari.com/search?keyword={encoded_keywords}&sort=created_time&order=desc"
             
@@ -154,7 +154,7 @@ if uploaded_file is not None and "identification_result" in st.session_state:
             
     with col_btn2:
         # 「Amazonで開く」
-        if st.button("📦 Amazonで開く", use_container_width=True):
+        if st.button("📦 Amazon", use_container_width=True):
             encoded_keywords = urllib.parse.quote(st.session_state["search_keywords_widget"])
             amazon_url = f"https://www.amazon.co.jp/s?k={encoded_keywords}"
             
@@ -163,6 +163,22 @@ if uploaded_file is not None and "identification_result" in st.session_state:
                 f"""
                 <script>
                     window.open("{amazon_url}", "_blank");
+                </script>
+                """,
+                height=0,
+            )
+
+    with col_btn3:
+        # 「ヨドバシで開く」
+        if st.button("📷 ヨドバシ", use_container_width=True):
+            encoded_keywords = urllib.parse.quote(st.session_state["search_keywords_widget"])
+            yodobashi_url = f"https://www.yodobashi.com/?word={encoded_keywords}"
+            
+            # JavaScriptを用いて新しいタブで開く
+            st.components.v1.html(
+                f"""
+                <script>
+                    window.open("{yodobashi_url}", "_blank");
                 </script>
                 """,
                 height=0,
