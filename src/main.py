@@ -119,10 +119,10 @@ with col_right:
                 )
                 st.markdown(formatted_result)
 
-# 3. 検索キーワードの調整とメルカリ確認 (全幅)
+# 3. 検索キーワードの調整と市場相場確認 (全幅)
 if uploaded_file is not None and "identification_result" in st.session_state:
     st.divider()
-    st.subheader("3. メルカリで相場を確認")
+    st.subheader("3. 市場相場を確認")
     
     current_keywords = st.session_state.get("search_keywords", "")
     
@@ -133,20 +133,40 @@ if uploaded_file is not None and "identification_result" in st.session_state:
         key="search_keywords_widget"
     )
 
-    # 「メルカリで開く」
-    if st.button("🚀 メルカリで開く", type="primary", use_container_width=False):
-        encoded_keywords = urllib.parse.quote(st.session_state["search_keywords_widget"])
-        mercari_url = f"https://jp.mercari.com/search?keyword={encoded_keywords}&sort=created_time&order=desc"
-        
-        # JavaScriptを用いて新しいタブで開く
-        st.components.v1.html(
-            f"""
-            <script>
-                window.open("{mercari_url}", "_blank");
-            </script>
-            """,
-            height=0,
-        )
+    # ボタンを横に並べる
+    col_btn1, col_btn2, _ = st.columns([1, 1, 4])
+    
+    with col_btn1:
+        # 「メルカリで開く」
+        if st.button("🚀 メルカリで開く", type="primary", use_container_width=True):
+            encoded_keywords = urllib.parse.quote(st.session_state["search_keywords_widget"])
+            mercari_url = f"https://jp.mercari.com/search?keyword={encoded_keywords}&sort=created_time&order=desc"
+            
+            # JavaScriptを用いて新しいタブで開く
+            st.components.v1.html(
+                f"""
+                <script>
+                    window.open("{mercari_url}", "_blank");
+                </script>
+                """,
+                height=0,
+            )
+            
+    with col_btn2:
+        # 「Amazonで開く」
+        if st.button("📦 Amazonで開く", use_container_width=True):
+            encoded_keywords = urllib.parse.quote(st.session_state["search_keywords_widget"])
+            amazon_url = f"https://www.amazon.co.jp/s?k={encoded_keywords}"
+            
+            # JavaScriptを用いて新しいタブで開く
+            st.components.v1.html(
+                f"""
+                <script>
+                    window.open("{amazon_url}", "_blank");
+                </script>
+                """,
+                height=0,
+            )
 
     # 4. 出品価格の入力
     st.divider()
