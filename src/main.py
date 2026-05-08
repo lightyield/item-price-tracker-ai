@@ -240,48 +240,94 @@ with tab_inventory:
     if not items:
         st.info("一覧にアイテムがありません。「アイテム分析」タブから保存してください。")
     else:
-        st.write(f"現在 {len(items)} 件のアイテムが保存されています。")
+        # 一括削除機能
+        col_count, col_bulk_del = st.columns([4, 1])
+        with col_count:
+            st.write(f"現在 {len(items)} 件のアイテムが保存されています。")
+        
+        with col_bulk_del:
+            if st.checkbox("一括削除を有効化", key="bulk_del_enable"):
+                if st.button("🚨 全アイテムを削除", type="primary", use_container_width=True):
+                    for item in items:
+                        inventory_manager.delete_item(item['id'])
+                    st.success("すべてのアイテムを削除しました")
+                    st.rerun()
+
+        st.divider()
         
         for item in items:
-            with st.expander(f"{item['date']} - {item['item_name']}", expanded=False):
-                col_img, col_info = st.columns([1, 2])
-                
-                with col_img:
-                    if item.get("image_path") and os.path.exists(item["image_path"]):
-                        st.image(item["image_path"], use_container_width=True)
-                    else:
-                        st.warning("画像が見つかりません")
-                
-                with col_info:
-                    st.markdown(f"### {item['item_name']}")
-                    st.write(f"**保存日時:** {item['date']}")
-                    st.write(f"**出品価格:** ¥{item['draft_price']}")
+            # サムネイル、エクスパンダー、削除ボタンのレイアウト
+            col_thumb, col_main, col_del = st.columns([1, 8, 1])
+            
+            image_path = item.get("image_path", "")
+            image_exists = image_path and os.path.exists(image_path)
+            
+            with col_thumb:
+                if image_exists:
+                    st.image(image_path, use_container_width=True)
+            
+            with col_main:
+                with st.expander(f"**{item['item_name']}** ({item['date']})", expanded=False):
+                    # 1. 画像と2. 特定 (アイテム分析と同じ2列レイアウト)
+                    i_col_left, i_col_right = st.columns([1, 1.2])
                     
-                    # リンク
-                    st.markdown("**検索リンク:**")
-                    l_col1, l_col2, l_col3 = st.columns(3)
-                    with l_col1: st.link_button("メルカリ", item['mercari_url'])
-                    with l_col2: st.link_button("Amazon", item['amazon_url'])
-                    with l_col3: st.link_button("ヨドバシ", item['yodobashi_url'])
+                    with i_col_left:
+                        st.subheader("1. 画像のアップロード")
+                        if image_exists:
+                            st.image(image_path, caption="保存された画像", use_container_width=True)
+                        else:
+                            st.warning("画像が見つかりません")
+                            
+                    with i_col_right:
+                        st.subheader("2. 商品の特定")
+                        # 分析結果の整形表示
+                        id_res = item.get("description", "")
+                        formatted_result = (
+                            id_res.replace("【商品名】:", "**【商品名】**\n")
+                            .replace("【説明】:", "\n\n**【説明】**\n")
+                            .replace("【検索キーワード】:", "\n\n**【検索キーワード】**\n")
+                            .replace("【定価】:", "\n\n**【定価】**\n")
+                        )
+                        st.markdown(formatted_result)
+
+                    # 3. 市場相場と 4. 出品価格
+                    st.divider()
+                    i_col_market, i_col_price = st.columns([1.5, 1])
                     
+                    with i_col_market:
+                        st.subheader("3. 市場相場を確認")
+                        st.write(f"キーワード: `{item['search_keywords']}`")
+                        
+                        m_col1, m_col2, m_col3 = st.columns(3)
+                        with m_col1: st.link_button("🚀 メルカリ", item['mercari_url'], use_container_width=True)
+                        with m_col2: st.link_button("📦 Amazon", item['amazon_url'], use_container_width=True)
+                        with m_col3: st.link_button("📷 ヨドバシ", item['yodobashi_url'], use_container_width=True)
+                        
+                    with i_col_price:
+                        st.subheader("4. 出品価格の入力")
+                        price = item.get("draft_price", "")
+                        if price.isdigit():
+                            st.markdown(f"### 設定価格: ¥{int(price):,}")
+                        else:
+                            st.markdown(f"### 設定価格: ¥{price}")
+
+                    # 5. 出品ドラフト
+                    st.divider()
+                    st.subheader("5. 出品ドラフトの作成")
                     if item.get("draft_title"):
-                        st.markdown(f"**出品タイトル:**\n`{item['draft_title']}`")
-                
-                # 詳細と削除
-                d_col1, d_col2 = st.columns([4, 1])
-                with d_col1:
-                    if st.checkbox("詳細情報を表示", key=f"details_{item['id']}"):
-                        st.markdown("**AI分析内容:**")
-                        st.text(item['description'])
-                        st.markdown("**商品説明文案:**")
+                        st.markdown("**出品タイトル**")
+                        st.code(item['draft_title'], language=None)
+                        st.markdown("**商品説明文**")
                         st.code(item['draft_description'], language=None)
-                
-                with d_col2:
-                    if st.button("🗑️ 削除", key=f"del_{item['id']}", type="secondary"):
-                        if inventory_manager.delete_item(item['id']):
-                            st.success("削除しました")
-                            st.rerun()
+                    else:
+                        st.info("このアイテムには出品ドラフトが保存されていません。")
+
+            with col_del:
+                if st.button("🗑️", key=f"del_{item['id']}", help="アイテムを削除"):
+                    if inventory_manager.delete_item(item['id']):
+                        st.success("削除しました")
+                        st.rerun()
 
 
 st.divider()
-st.caption("Developed by lightyield - テクノロジーで遺品整理をスマートに。")
+st.caption("Developed by lightyield - テクノロジーで整理をスマートに。")
