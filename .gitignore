@@ -16,3 +16,4 @@ data/temp_images/
 # OS
 .DS_Store
 startup.log
+data/
