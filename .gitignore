@@ -10,8 +10,7 @@ venv/
 .streamlit/
 
 # Database
-data/*.sqlite
-data/temp_images/
+data/
 
 # OS
 .DS_Store
