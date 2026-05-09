@@ -3,11 +3,15 @@ import os
 import urllib.parse
 import re
 from PIL import Image
+from pillow_heif import register_heif_opener
 from ai.gemini_client import GeminiClient
 from utils.parsers import parse_keywords, parse_list_price, parse_draft
 from utils.formatters import format_identification_result
 from config import SEARCH_URLS
 from ui.components import render_item_details, open_url_in_new_tab
+
+# HEICをPillowで扱えるように登録
+register_heif_opener()
 
 def render_analysis_tab(api_key, inventory_manager):
     st.markdown("""
@@ -19,7 +23,7 @@ def render_analysis_tab(api_key, inventory_manager):
 
     with col_left:
         st.subheader("1. 画像のアップロード")
-        uploaded_file = st.file_uploader("画像を選択してください...", type=["jpg", "jpeg", "png"])
+        uploaded_file = st.file_uploader("画像を選択してください...", type=["jpg", "jpeg", "png", "heic", "heif"])
         
         if uploaded_file is not None:
             if "last_uploaded_file" not in st.session_state or st.session_state["last_uploaded_file"] != uploaded_file.name:
