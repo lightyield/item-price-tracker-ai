@@ -26,6 +26,7 @@
 * **Search Grounding**: Google Search (正確な商品特定と定価調査)
 * **Language**: Python 3.10+
 * **Storage**: Local JSON & Images (Git管理外)
+* **Image Processing**: Pillow, pillow-heif
 
 ### 処理フロー
 1.  **Input**: アイテムの画像をアップロード。
