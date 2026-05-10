@@ -3,11 +3,10 @@ import os
 # Gemini AI Settings
 # 優先度の高い順にモデルを並べます。
 GEMINI_MODELS = [
+    'gemini-1.5-flash',
+    'gemini-1.5-pro',
     'gemini-2.0-flash',
     'gemini-2.0-flash-lite',
-    'gemini-2.5-flash',
-    'gemini-2.5-flash-lite',
-    'gemini-2.5-pro',
     'gemini-flash-latest',
     'gemini-pro-latest',
 ]
