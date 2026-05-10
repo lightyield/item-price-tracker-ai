@@ -63,20 +63,34 @@ class GeminiClient:
 
         def _generate(**kwargs):
             model_id = kwargs.pop('model')
+            use_search = kwargs.pop('use_search', True)
+            
+            config_args = {
+                "temperature": GEMINI_TEMPERATURE
+            }
+            if use_search:
+                config_args["tools"] = [types.Tool(google_search=types.GoogleSearch())]
+
             response = self.client.models.generate_content(
                 model=model_id,
                 contents=[
                     types.Part.from_bytes(data=img_bytes, mime_type='image/png'),
                     IDENTIFICATION_PROMPT
                 ],
-                config=types.GenerateContentConfig(
-                    tools=[types.Tool(google_search=types.GoogleSearch())],
-                    temperature=GEMINI_TEMPERATURE
-                )
+                config=types.GenerateContentConfig(**config_args)
             )
             return response.text
 
-        return self._call_with_fallback(_generate)
+        try:
+            # まずは検索ありで試行
+            return self._call_with_fallback(_generate, use_search=True)
+        except Exception as e:
+            error_msg = str(e).lower()
+            # 429かつlimit: 0のような致命的な制限の場合、検索なしで全モデルを再試行
+            if "429" in error_msg or "resource_exhausted" in error_msg:
+                print(f"Retrying all models without Google Search due to quota limits: {e}")
+                return self._call_with_fallback(_generate, use_search=False)
+            raise e
 
     def generate_draft(self, identification_result: str, market_results: list) -> tuple:
         """

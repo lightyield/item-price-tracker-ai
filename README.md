@@ -22,8 +22,9 @@
 
 ### 技術スタック
 * **UI**: Streamlit (Python-based Web Interface)
-* **AI Engine**: Google Gemini 2.0 / 2.5 (Flash / Pro)
+* **AI Engine**: Google Gemini 1.5 / 2.0 (Flash / Pro) - 無料枠での安定性を考慮し、1.5 Flash を優先使用
 * **Search Grounding**: Google Search (正確な商品特定と定価調査)
+* **Robustness**: クォータ制限（429エラー）発生時の自動フォールバック（Google検索なしでの再試行）機能を搭載
 * **Language**: Python 3.10+
 * **Storage**: Local JSON & Images (Git管理外)
 * **Image Processing**: Pillow, pillow-heif
