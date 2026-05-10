@@ -59,6 +59,18 @@ class InventoryManager:
         
         return item_id
 
+    def update_item(self, item_id: str, updated_data: dict) -> bool:
+        items = self.load_items()
+        for i, item in enumerate(items):
+            if item.id == item_id:
+                # 既存のデータを更新
+                item_dict = item.to_dict()
+                item_dict.update(updated_data)
+                items[i] = Item.from_dict(item_dict)
+                self._save_all(items)
+                return True
+        return False
+
     def delete_item(self, item_id: str) -> bool:
         items = self.load_items()
         item_to_delete = next((item for item in items if item.id == item_id), None)

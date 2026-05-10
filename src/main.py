@@ -7,7 +7,7 @@ import sys
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from database.manager import InventoryManager
 from ui.tabs.analysis import render_analysis_tab
-from ui.tabs.inventory import render_inventory_tab
+from ui.tabs.inventory import render_inventory_screen
 
 # 環境変数の読み込み
 load_dotenv()
@@ -36,7 +36,7 @@ with tab_analysis:
     render_analysis_tab(api_key, inventory_manager)
 
 with tab_inventory:
-    render_inventory_tab(inventory_manager)
+    render_inventory_screen(api_key, inventory_manager)
 
 st.divider()
 st.caption("Developed by lightyield - テクノロジーで整理をスマートに。")
