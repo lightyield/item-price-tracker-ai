@@ -1,8 +1,10 @@
 import streamlit as st
 import os
 from ui.components import render_item_details
+from ai.gemini_client import GeminiClient
+from utils.parsers import parse_draft
 
-def render_inventory_tab(inventory_manager):
+def render_inventory_screen(api_key, inventory_manager):
     st.header("📋 アイテム一覧")
     
     items = inventory_manager.load_items()
@@ -38,7 +40,7 @@ def render_inventory_tab(inventory_manager):
             
             with col_main:
                 with st.expander(f"**{item.item_name}** ({item.date})", expanded=False):
-                    render_item_details(item, is_interactive=False)
+                    render_item_details(item, is_interactive=False, api_key=api_key, inventory_manager=inventory_manager)
 
             with col_del:
                 if st.button("🗑️", key=f"del_{item.id}", help="アイテムを削除"):
