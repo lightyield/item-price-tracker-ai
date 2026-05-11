@@ -59,6 +59,10 @@ class InventoryManager:
         
         return item_id
 
+    def get_item_by_id(self, item_id: str) -> Optional[Item]:
+        items = self.load_items()
+        return next((item for item in items if item.id == item_id), None)
+
     def update_item(self, item_id: str, updated_data: dict) -> bool:
         items = self.load_items()
         for i, item in enumerate(items):

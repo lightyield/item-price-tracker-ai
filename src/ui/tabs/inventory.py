@@ -28,7 +28,7 @@ def render_inventory_screen(api_key, inventory_manager):
         st.divider()
         
         for item in items:
-            # サムネイル、エクスパンダー、削除ボタンのレイアウト
+            # サムネイル、タイトルリンク、削除ボタンのレイアウト
             col_thumb, col_main, col_del = st.columns([1, 8, 1])
             
             image_path = item.image_path
@@ -39,8 +39,19 @@ def render_inventory_screen(api_key, inventory_manager):
                     st.image(image_path, use_container_width=True)
             
             with col_main:
-                with st.expander(f"**{item.item_name}** ({item.date})", expanded=False):
-                    render_item_details(item, is_interactive=False, api_key=api_key, inventory_manager=inventory_manager)
+                # タイトルをリンクにしつつ、見た目を以前の太字スタイルに寄せる
+                detail_url = f"/?item_id={item.id}"
+                st.markdown(
+                    f"""
+                    <div style="margin-top: 5px;">
+                        <a href="{detail_url}" target="_blank" style="text-decoration: none; color: inherit; font-weight: bold; font-size: 1.1em;">
+                            {item.item_name}
+                        </a>
+                    </div>
+                    """, 
+                    unsafe_allow_html=True
+                )
+                st.caption(f"📅 登録日: {item.date}")
 
             with col_del:
                 if st.button("🗑️", key=f"del_{item.id}", help="アイテムを削除"):
