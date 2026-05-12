@@ -1,6 +1,6 @@
 # Item Price Tracker (AI-Powered)
 
-写真からアイテムの商品特定を行い、メルカリでの相場確認と出品ドラフト作成を支援する、自分専用のローカル実行型ツールです。 マルチモーダルAI（Gemini API）による画像認識とGoogle検索（Search Grounding）を組み合わせて、整理や資産管理の負担を最小化します。
+写真からアイテムの商品特定を行い、メルカリでの相場確認と出品ドラフト作成を支援する、自分専用のローカル実行型ツールです。 マルチモーダルAI（Gemini API）による高度な画像認識により、整理や資産管理の負担を最小化します。
 
 ## 1. 開発背景 (Background)
 
@@ -23,16 +23,16 @@
 
 ### 技術スタック
 * **UI**: Streamlit (Python-based Web Interface)
-* **AI Engine**: Google Gemini 1.5 / 2.0 (Flash / Pro) - 無料枠での安定性を考慮し、1.5 Flash を優先使用
-* **Search Grounding**: Google Search (正確な商品特定と定価調査)
-* **Robustness**: クォータ制限（429エラー）発生時の自動フォールバック（Google検索なしでの再試行）機能を搭載
+* **AI Engine**: Google Gemini 2.0 / 1.5 (Flash / Pro) - 高速な **2.0 Flash** を優先使用
+* **Optimization**: クォータ制限の回避と高速化のため、Google検索機能（Search Grounding）をあえて使用せず、AIの知識ベースと画像解析のみで特定を行います。
+* **Performance**: API送信前に画像を自動リサイズ・JPEG変換することで、アップロード時間を短縮。
 * **Language**: Python 3.10+
 * **Storage**: Local JSON & Images (Git管理外)
 * **Image Processing**: Pillow, pillow-heif
 
 ### 処理フロー
-1.  **Input**: アイテムの画像をアップロード。
-2.  **Analysis**: Gemini API が Google Search を活用して「商品名」「型番」「定価（参考）」を特定。
+1.  **Input**: アイテムの画像をアップロード（自動で軽量化）。
+2.  **Analysis**: Gemini API が画像内のテキスト・ロゴ・形状から「商品名」「型番」「定価（推定）」を特定。
 3.  **Search**: AIが抽出したキーワードを元に、ワンクリックでメルカリ・Amazon・ヨドバシの検索結果を表示。
 4.  **Drafting**: 特定結果と市場価格（入力値）を元に、AIが出品タイトルと商品説明文を自動生成。
 5.  **Saving**: 分析結果と出品ドラフトをローカルのアイテム一覧に保存。
