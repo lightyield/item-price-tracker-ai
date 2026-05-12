@@ -56,25 +56,32 @@ class GeminiClient:
         """
         Identify the item in the image. Returns (result_text, used_model_id).
         """
-        # PIL Image to bytes
+        # 画像をリサイズ（長辺が1024px以下になるように）
+        max_size = 1024
+        if max(image.size) > max_size:
+            scale = max_size / max(image.size)
+            new_size = (int(image.size[0] * scale), int(image.size[1] * scale))
+            image = image.resize(new_size, Image.LANCZOS)
+
+        # PIL Image to bytes (JPEG形式で圧縮)
         img_byte_arr = io.BytesIO()
-        image.save(img_byte_arr, format='PNG')
+        # RGBAの場合はRGBに変換（JPEGは透過をサポートしていないため）
+        if image.mode in ("RGBA", "P"):
+            image = image.convert("RGB")
+        image.save(img_byte_arr, format='JPEG', quality=85)
         img_bytes = img_byte_arr.getvalue()
 
         def _generate(**kwargs):
             model_id = kwargs.pop('model')
-            use_search = kwargs.pop('use_search', True)
             
             config_args = {
                 "temperature": GEMINI_TEMPERATURE
             }
-            if use_search:
-                config_args["tools"] = [types.Tool(google_search=types.GoogleSearch())]
 
             response = self.client.models.generate_content(
                 model=model_id,
                 contents=[
-                    types.Part.from_bytes(data=img_bytes, mime_type='image/png'),
+                    types.Part.from_bytes(data=img_bytes, mime_type='image/jpeg'),
                     IDENTIFICATION_PROMPT
                 ],
                 config=types.GenerateContentConfig(**config_args)
@@ -82,14 +89,9 @@ class GeminiClient:
             return response.text
 
         try:
-            # まずは検索ありで試行
-            return self._call_with_fallback(_generate, use_search=True)
+            # Google検索なしで直接実行
+            return self._call_with_fallback(_generate)
         except Exception as e:
-            error_msg = str(e).lower()
-            # 429かつlimit: 0のような致命的な制限の場合、検索なしで全モデルを再試行
-            if "429" in error_msg or "resource_exhausted" in error_msg:
-                print(f"Retrying all models without Google Search due to quota limits: {e}")
-                return self._call_with_fallback(_generate, use_search=False)
             raise e
 
     def generate_draft(self, identification_result: str, market_results: list) -> tuple:
