@@ -12,22 +12,41 @@ def render_inventory_screen(api_key, inventory_manager):
     if not items:
         st.info("一覧にアイテムがありません。「アイテム分析」タブから保存してください。")
     else:
-        # 一括削除機能
-        col_count, col_bulk_del = st.columns([4, 1])
-        with col_count:
-            st.write(f"現在 {len(items)} 件のアイテムが保存されています。")
+        # ページング設定
+        ITEMS_PER_PAGE = 10
+        total_items = len(items)
+        total_pages = (total_items - 1) // ITEMS_PER_PAGE + 1
         
-        with col_bulk_del:
-            if st.checkbox("一括削除を有効化", key="bulk_del_enable"):
-                if st.button("🚨 全アイテムを削除", type="primary", use_container_width=True):
-                    for item in items:
-                        inventory_manager.delete_item(item.id)
-                    st.success("すべてのアイテムを削除しました")
-                    st.rerun()
+        # ページ選択UI
+        col_count, col_page = st.columns([3, 2])
+        with col_count:
+            st.write(f"現在 {total_items} 件のアイテムが保存されています。")
+        
+        with col_page:
+            if total_pages > 1:
+                current_page = st.number_input("ページ", min_value=1, max_value=total_pages, step=1, value=1)
+            else:
+                current_page = 1
+
+        # 表示範囲の計算
+        start_idx = (current_page - 1) * ITEMS_PER_PAGE
+        end_idx = min(start_idx + ITEMS_PER_PAGE, total_items)
+        
+        if total_items > 0:
+            st.info(f"{total_items}件中 {start_idx + 1} 〜 {end_idx} 件目を表示中")
+
+        # 一括削除機能
+        if st.checkbox("一括削除を有効化", key="bulk_del_enable"):
+            if st.button("🚨 全アイテムを削除", type="primary", use_container_width=True):
+                for item in items:
+                    inventory_manager.delete_item(item.id)
+                st.success("すべてのアイテムを削除しました")
+                st.rerun()
 
         st.divider()
         
-        for item in items:
+        # ページ内のアイテムのみ表示
+        for item in items[start_idx:end_idx]:
             # サムネイル、タイトルリンク、削除ボタンのレイアウト
             col_thumb, col_main, col_del = st.columns([1, 8, 1])
             
