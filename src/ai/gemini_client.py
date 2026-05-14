@@ -6,9 +6,7 @@ import sys
 import os
 import time
 
-# プロジェクトルートをパスに追加してインポートできるようにする
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from config import GEMINI_MODELS, GEMINI_TEMPERATURE, IDENTIFICATION_PROMPT, DRAFT_PROMPT
+from src.config import GEMINI_MODELS, GEMINI_TEMPERATURE, IDENTIFICATION_PROMPT, DRAFT_PROMPT
 
 class GeminiClient:
     def __init__(self, api_key: str):

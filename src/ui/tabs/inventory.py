@@ -1,8 +1,9 @@
 import streamlit as st
 import os
-from ui.components import render_item_details
-from ai.gemini_client import GeminiClient
-from utils.parsers import parse_draft
+from src.ui.components import render_item_details
+from src.ai.gemini_client import GeminiClient
+from src.utils.parsers import parse_draft
+from src.config import ITEMS_PER_PAGE
 
 def render_inventory_screen(api_key, inventory_manager):
     st.header("📋 アイテム一覧")
@@ -13,7 +14,6 @@ def render_inventory_screen(api_key, inventory_manager):
         st.info("一覧にアイテムがありません。「アイテム分析」タブから保存してください。")
     else:
         # ページング設定
-        ITEMS_PER_PAGE = 10
         total_items = len(items)
         total_pages = (total_items - 1) // ITEMS_PER_PAGE + 1
         

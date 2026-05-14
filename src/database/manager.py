@@ -3,31 +3,37 @@ import os
 import uuid
 from datetime import datetime
 from PIL import Image
-from typing import List, Optional
-from models.item import Item
+from typing import List, Optional, Dict, Any
+from src.models.item import Item
 
 class InventoryManager:
-    def __init__(self, data_file="data/inventory.json", image_dir="data/images"):
+    def __init__(self, data_file: str = "data/inventory.json", image_dir: str = "data/images"):
         self.data_file = data_file
         self.image_dir = image_dir
+        self._cached_items: Optional[List[Item]] = None
         self._ensure_directories()
 
-    def _ensure_directories(self):
+    def _ensure_directories(self) -> None:
         os.makedirs(os.path.dirname(self.data_file), exist_ok=True)
         os.makedirs(self.image_dir, exist_ok=True)
         if not os.path.exists(self.data_file):
             with open(self.data_file, "w", encoding="utf-8") as f:
                 json.dump([], f)
 
-    def load_items(self) -> List[Item]:
+    def load_items(self, force_reload: bool = False) -> List[Item]:
+        if self._cached_items is not None and not force_reload:
+            return self._cached_items
+
         try:
             with open(self.data_file, "r", encoding="utf-8") as f:
                 data = json.load(f)
-                return [Item.from_dict(item_dict) for item_dict in data]
+                self._cached_items = [Item.from_dict(item_dict) for item_dict in data]
+                return self._cached_items
         except (FileNotFoundError, json.JSONDecodeError):
+            self._cached_items = []
             return []
 
-    def save_item(self, item_data: dict, pil_image: Optional[Image.Image] = None) -> str:
+    def save_item(self, item_data: Dict[str, Any], pil_image: Optional[Image.Image] = None) -> str:
         items = self.load_items()
         
         item_id = str(uuid.uuid4())
@@ -44,8 +50,8 @@ class InventoryManager:
             item_name=item_data.get("item_name", ""),
             description=item_data.get("description", ""),
             search_keywords=item_data.get("search_keywords", ""),
-            list_price=item_data.get("list_price", ""),
-            draft_price=item_data.get("draft_price", ""),
+            list_price=Item._to_int(item_data.get("list_price")),
+            draft_price=Item._to_int(item_data.get("draft_price")),
             mercari_url=item_data.get("mercari_url", ""),
             amazon_url=item_data.get("amazon_url", ""),
             yodobashi_url=item_data.get("yodobashi_url", ""),
@@ -54,7 +60,7 @@ class InventoryManager:
             image_path=image_path
         )
         
-        items.insert(0, new_item)  # 最新を先頭に
+        items.insert(0, new_item)
         self._save_all(items)
         
         return item_id
@@ -63,7 +69,7 @@ class InventoryManager:
         items = self.load_items()
         return next((item for item in items if item.id == item_id), None)
 
-    def update_item(self, item_id: str, updated_data: dict) -> bool:
+    def update_item(self, item_id: str, updated_data: Dict[str, Any]) -> bool:
         items = self.load_items()
         for i, item in enumerate(items):
             if item.id == item_id:
@@ -82,13 +88,17 @@ class InventoryManager:
         if item_to_delete:
             # 画像も削除
             if item_to_delete.image_path and os.path.exists(item_to_delete.image_path):
-                os.remove(item_to_delete.image_path)
+                try:
+                    os.remove(item_to_delete.image_path)
+                except OSError:
+                    pass # 削除失敗は無視
             
             items = [item for item in items if item.id != item_id]
             self._save_all(items)
             return True
         return False
 
-    def _save_all(self, items: List[Item]):
+    def _save_all(self, items: List[Item]) -> None:
+        self._cached_items = items
         with open(self.data_file, "w", encoding="utf-8") as f:
             json.dump([item.to_dict() for item in items], f, ensure_ascii=False, indent=2)
