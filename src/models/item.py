@@ -8,8 +8,8 @@ class Item:
     item_name: str
     description: str
     search_keywords: str
-    list_price: str
-    draft_price: str
+    list_price: Optional[int]
+    draft_price: Optional[int]
     mercari_url: str
     amazon_url: str
     yodobashi_url: str
@@ -28,8 +28,8 @@ class Item:
             item_name=data.get('item_name', ''),
             description=data.get('description', ''),
             search_keywords=data.get('search_keywords', ''),
-            list_price=data.get('list_price', ''),
-            draft_price=data.get('draft_price', ''),
+            list_price=cls._to_int(data.get('list_price')),
+            draft_price=cls._to_int(data.get('draft_price')),
             mercari_url=data.get('mercari_url', ''),
             amazon_url=data.get('amazon_url', ''),
             yodobashi_url=data.get('yodobashi_url', ''),
@@ -37,3 +37,24 @@ class Item:
             draft_description=data.get('draft_description', ''),
             image_path=data.get('image_path', '')
         )
+
+    @staticmethod
+    def _to_int(value: Any) -> Optional[int]:
+        if value is None or value == "":
+            return None
+        try:
+            return int(value)
+        except (ValueError, TypeError):
+            return None
+
+    @property
+    def formatted_list_price(self) -> str:
+        if self.list_price is None:
+            return "不明"
+        return f"¥{self.list_price:,}"
+
+    @property
+    def formatted_draft_price(self) -> str:
+        if self.draft_price is None:
+            return "未設定"
+        return f"¥{self.draft_price:,}"

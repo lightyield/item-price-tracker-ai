@@ -1,8 +1,8 @@
 import os
 import json
 import pytest
-from database.manager import InventoryManager
-from models.item import Item
+from src.database.manager import InventoryManager
+from src.models.item import Item
 
 @pytest.fixture
 def temp_manager(tmp_path):
@@ -34,7 +34,7 @@ def test_update_item(temp_manager):
     items = temp_manager.load_items()
     updated_item = next(item for item in items if item.id == item_id)
     assert updated_item.draft_title == "New Title"
-    assert updated_item.draft_price == "2000"
+    assert updated_item.draft_price == 2000
     assert updated_item.draft_description == "Old Description" # 更新していない箇所は維持される
 
 def test_update_item_not_found(temp_manager):

@@ -1,14 +1,13 @@
 import streamlit as st
 import os
 import urllib.parse
-import re
 from PIL import Image
 from pillow_heif import register_heif_opener
-from ai.gemini_client import GeminiClient
-from utils.parsers import parse_keywords, parse_list_price, parse_draft
-from utils.formatters import format_identification_result
-from config import SEARCH_URLS
-from ui.components import render_item_details, open_url_in_new_tab
+from src.ai.gemini_client import GeminiClient
+from src.utils.parsers import parse_keywords, parse_list_price, parse_draft, parse_identification_result, generate_search_urls
+from src.utils.formatters import format_identification_result
+from src.config import SEARCH_URLS
+from src.ui.components import render_item_details, open_url_in_new_tab
 
 # HEICをPillowで扱えるように登録
 register_heif_opener()
@@ -53,8 +52,11 @@ def render_analysis_tab(api_key, inventory_manager):
                             result, model_used = client.identify_item(image)
                             st.session_state["identification_result"] = result
                             st.session_state["id_model_used"] = model_used
-                            st.session_state["search_keywords"] = parse_keywords(result)
-                            st.session_state["draft_price"] = parse_list_price(result)
+                            
+                            # 解析結果を一括取得
+                            parsed_data = parse_identification_result(result)
+                            st.session_state["search_keywords"] = parsed_data["search_keywords"]
+                            st.session_state["draft_price"] = parsed_data["list_price"]
                             st.rerun()
                         except Exception as e:
                             st.error(f"分析中にエラーが発生しました: {e}")
@@ -77,17 +79,17 @@ def render_analysis_tab(api_key, inventory_manager):
             search_keywords_input = st.text_input("検索に使用するキーワード:", value=current_keywords, key="search_keywords_widget")
 
             col_btn1, col_btn2, col_btn3 = st.columns([1, 1, 1])
-            encoded_keywords = urllib.parse.quote(st.session_state["search_keywords_widget"])
+            urls = generate_search_urls(st.session_state["search_keywords_widget"])
 
             with col_btn1:
                 if st.button("🚀 メルカリ", use_container_width=True):
-                    open_url_in_new_tab(SEARCH_URLS["mercari"].format(keyword=encoded_keywords))
+                    open_url_in_new_tab(urls["mercari"])
             with col_btn2:
                 if st.button("📦 Amazon", use_container_width=True):
-                    open_url_in_new_tab(SEARCH_URLS["amazon"].format(keyword=encoded_keywords))
+                    open_url_in_new_tab(urls["amazon"])
             with col_btn3:
                 if st.button("📷 ヨドバシ", use_container_width=True):
-                    open_url_in_new_tab(SEARCH_URLS["yodobashi"].format(keyword=encoded_keywords))
+                    open_url_in_new_tab(urls["yodobashi"])
 
         with col_price:
             st.subheader("4. 出品価格の入力")
@@ -118,7 +120,7 @@ def render_analysis_tab(api_key, inventory_manager):
             st.text_input("出品タイトル (40文字以内)", value=title, key="draft_title")
             
             display_price = st.session_state.get("draft_price", "")
-            if display_price.isdigit():
+            if display_price and str(display_price).isdigit():
                 st.markdown(f"### 設定価格: ¥{int(display_price):,}")
             else:
                 st.markdown(f"### 設定価格: ¥{display_price}")
@@ -132,26 +134,21 @@ def render_analysis_tab(api_key, inventory_manager):
             
             if st.button("💾 このアイテムを保存", use_container_width=False):
                 keywords = st.session_state.get("search_keywords_widget", "")
-                encoded_keywords = urllib.parse.quote(keywords)
                 
-                # 商品名抽出
-                id_res = st.session_state["identification_result"]
-                item_name_match = re.search(r"【商品名】:\s*(.*)", id_res)
-                item_name = item_name_match.group(1) if item_name_match else "不明なアイテム"
-
-                # 仮の保存用パス作成（InventoryManager内部で実際の保存が行われるが、ここではItemオブジェクトを作成）
-                item_data = {
-                    "item_name": item_name,
-                    "description": id_res,
+                # 解析結果から保存用データを準備
+                item_data = parse_identification_result(st.session_state["identification_result"])
+                
+                # UI側の入力値で上書き
+                item_data.update({
                     "search_keywords": keywords,
-                    "list_price": parse_list_price(id_res),
                     "draft_price": st.session_state.get("draft_price", ""),
-                    "mercari_url": SEARCH_URLS["mercari"].format(keyword=encoded_keywords),
-                    "amazon_url": SEARCH_URLS["amazon"].format(keyword=encoded_keywords),
-                    "yodobashi_url": SEARCH_URLS["yodobashi"].format(keyword=encoded_keywords),
                     "draft_title": title,
                     "draft_description": description
-                }
+                })
+                
+                # キーワードが変更されている可能性があるのでURLを再生成
+                urls = generate_search_urls(keywords)
+                item_data.update(urls)
                 
                 inventory_manager.save_item(item_data, image)
                 st.success("✅ 保存しました！「アイテム一覧」タブから確認できます。")

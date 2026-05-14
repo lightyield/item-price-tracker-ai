@@ -3,12 +3,10 @@ import os
 from dotenv import load_dotenv
 import sys
 
-# プロジェクトルートをパスに追加してインポートできるようにする
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-from database.manager import InventoryManager
-from ui.tabs.analysis import render_analysis_tab
-from ui.tabs.inventory import render_inventory_screen
-from ui.components import render_item_details
+from src.database.manager import InventoryManager
+from src.ui.tabs.analysis import render_analysis_tab
+from src.ui.tabs.inventory import render_inventory_screen
+from src.ui.components import render_item_details
 
 # 環境変数の読み込み
 load_dotenv()

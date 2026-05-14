@@ -1,31 +1,13 @@
 import streamlit as st
 import os
-from models.item import Item
-from utils.formatters import format_identification_result
-
-def open_url_in_new_tab(url: str):
-    """URLを新しいタブで開くためのJavaScriptを埋め込む"""
-    st.components.v1.html(
-        f"""
-        <script>
-            window.open("{url}", "_blank");
-        </script>
-        """,
-        height=0,
-    )
-
-from ai.gemini_client import GeminiClient
-from utils.parsers import parse_draft
+from src.models.item import Item
+from src.utils.formatters import format_identification_result
+from src.utils.parsers import parse_draft, generate_search_urls
+from src.ai.gemini_client import GeminiClient
 
 def render_item_details(item: Item, is_interactive: bool = False, api_key: str = None, inventory_manager = None):
     """
     アイテムの詳細（ステップ1〜5）を描画する共通コンポーネント
-    
-    Args:
-        item: 表示するアイテムデータ
-        is_interactive: 分析中などのインタラクティブなモードかどうか
-        api_key: ドラフト再作成用のAPIキー（Inventoryモード用）
-        inventory_manager: 保存用のインベントリマネージャー（Inventoryモード用）
     """
     # インベントリモード（編集可能モード）の判定
     is_inventory_mode = inventory_manager is not None
@@ -56,38 +38,45 @@ def render_item_details(item: Item, is_interactive: bool = False, api_key: str =
             st.write(f"キーワード: `{item.search_keywords}`")
         
         m_col1, m_col2, m_col3 = st.columns(3)
+        urls = {
+            "mercari": item.mercari_url,
+            "amazon": item.amazon_url,
+            "yodobashi": item.yodobashi_url
+        }
+
+        # インタラクティブモードでキーワードが変更されている可能性を考慮
+        if is_interactive and "search_keywords_widget" in st.session_state:
+            urls = generate_search_urls(st.session_state["search_keywords_widget"])
+
         with m_col1:
             if is_interactive:
-                if st.button("🚀 メルカリ", use_container_width=True):
-                    open_url_in_new_tab(item.mercari_url)
+                if st.button("🚀 メルカリ", use_container_width=True, key=f"btn_mercari_{item.id}"):
+                    open_url_in_new_tab(urls["mercari"])
             else:
-                st.link_button("🚀 メルカリ", item.mercari_url, use_container_width=True)
+                st.link_button("🚀 メルカリ", urls["mercari"], use_container_width=True)
                 
         with m_col2:
             if is_interactive:
-                if st.button("📦 Amazon", use_container_width=True):
-                    open_url_in_new_tab(item.amazon_url)
+                if st.button("📦 Amazon", use_container_width=True, key=f"btn_amazon_{item.id}"):
+                    open_url_in_new_tab(urls["amazon"])
             else:
-                st.link_button("📦 Amazon", item.amazon_url, use_container_width=True)
+                st.link_button("📦 Amazon", urls["amazon"], use_container_width=True)
                 
         with m_col3:
             if is_interactive:
-                if st.button("📷 ヨドバシ", use_container_width=True):
-                    open_url_in_new_tab(item.yodobashi_url)
+                if st.button("📷 ヨドバシ", use_container_width=True, key=f"btn_yodobashi_{item.id}"):
+                    open_url_in_new_tab(urls["yodobashi"])
             else:
-                st.link_button("📷 ヨドバシ", item.yodobashi_url, use_container_width=True)
+                st.link_button("📷 ヨドバシ", urls["yodobashi"], use_container_width=True)
                 
     with col_price:
         st.subheader("4. 出品価格の入力")
         if is_inventory_mode:
             # 在庫一覧では価格を変更可能にする
-            new_price = st.text_input("出品価格 (¥)", value=item.draft_price, key=f"price_input_{item.id}")
+            initial_price = str(item.draft_price) if item.draft_price is not None else ""
+            new_price = st.text_input("出品価格 (¥)", value=initial_price, key=f"price_input_{item.id}")
         else:
-            price = item.draft_price
-            if price.isdigit():
-                st.markdown(f"### 設定価格: ¥{int(price):,}")
-            else:
-                st.markdown(f"### 設定価格: ¥{price}")
+            st.markdown(f"### 設定価格: {item.formatted_draft_price}")
 
     # 5. 出品ドラフト
     st.divider()
