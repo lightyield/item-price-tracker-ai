@@ -5,6 +5,10 @@ from src.utils.formatters import format_identification_result
 from src.utils.parsers import parse_draft, generate_search_urls
 from src.ai.gemini_client import GeminiClient
 
+def open_url_in_new_tab(url):
+    js = f'window.open("{url}", "_blank").focus();'
+    st.components.v1.html(f'<script>{js}</script>', height=0, width=0)
+
 def render_item_details(item: Item, is_interactive: bool = False, api_key: str = None, inventory_manager = None):
     """
     アイテムの詳細（ステップ1〜5）を描画する共通コンポーネント
