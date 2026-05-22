@@ -68,5 +68,5 @@ pytest tests/
 
 ## 6. プロジェクト規約 (Project Guidelines)
 
-本プロジェクトの開発ルールや指針については、[GEMINI.md](./GEMINI.md) を参照してください。
+本プロジェクトの開発ルールや指針については、[ANTIGRAVITY.md](./ANTIGRAVITY.md) を参照してください。
 
