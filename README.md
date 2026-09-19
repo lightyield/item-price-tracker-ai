@@ -23,8 +23,8 @@
 
 ### 技術スタック
 * **UI**: Streamlit (Python-based Web Interface)
-* **AI Engine**: Google Gemini 2.0 / 1.5 (Flash / Pro) - 高速な **2.0 Flash** を優先使用
-* **Optimization**: クォータ制限の回避と高速化のため、Google検索機能（Search Grounding）をあえて使用せず、AIの知識ベースと画像解析のみで特定を行います。
+* **AI Engine**: Google Gemini API（動的モデル解決・自動フォールバック対応） - `models.list` から利用可能な最新 Flash 系モデル（`gemini-2.5-flash`, `gemini-2.0-flash` 等）を自動選定し、新モデル登場時も自動追従
+* **Optimization**: クォータ制限の回避と高速化のため、Google検索機能（Search Grounding）をあえて使用せず、AIの知識ベースと画像解析のみで特定を行います。一時的過負荷（503）やクォータ制限（429）時の指数バックオフリトライおよび次候補モデルへの自動フォールバックを搭載。
 * **Performance**: API送信前に画像を自動リサイズ・JPEG変換することで、アップロード時間を短縮。
 * **Language**: Python 3.10+
 * **Storage**: Local JSON & Images (Git管理外)

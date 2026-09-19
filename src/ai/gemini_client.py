@@ -5,19 +5,94 @@ import io
 import sys
 import os
 import time
+import re
+from typing import List, Tuple, Optional
 
-from src.config import GEMINI_MODELS, GEMINI_TEMPERATURE, IDENTIFICATION_PROMPT, DRAFT_PROMPT
+from src.config import DEFAULT_GEMINI_MODELS, GEMINI_TEMPERATURE, IDENTIFICATION_PROMPT, DRAFT_PROMPT
+
+def get_available_gemini_models(client: Optional[genai.Client] = None, max_candidates: int = 5) -> List[str]:
+    """
+    利用可能なGeminiモデル一覧を動的に取得し、画像認識・ドラフト生成に適したFlash系モデルを優先順にソートして返却する。
+    
+    1. generateContent をサポートしているモデルを抽出
+    2. 特殊用途モデル（画像生成 imagen、TTS、音声、リアルタイム、embeddingなど）を除外
+    3. Flash系モデルを優先し、バージョン降順（安定版優先、-liteは標準の後）でソート
+    4. 上位候補（最大 max_candidates 件）を返却
+    """
+    if client is None:
+        return list(DEFAULT_GEMINI_MODELS[:max_candidates])
+
+    try:
+        models_pager = client.models.list()
+        candidates = []
+        for m in models_pager:
+            name = getattr(m, 'name', '') or ''
+            if not name:
+                continue
+            model_id = re.sub(r'^models/', '', name)
+
+            # supported_actions をチェック（存在する場合）
+            actions = getattr(m, 'supported_actions', None) or []
+            if actions and 'generateContent' not in actions:
+                continue
+
+            # 特殊用途モデルを除外
+            lower = model_id.lower()
+            if any(k in lower for k in ['image', 'tts', 'audio', 'realtime', 'embedding', 'imagen']):
+                continue
+
+            candidates.append(model_id)
+
+        if not candidates:
+            return list(DEFAULT_GEMINI_MODELS[:max_candidates])
+
+        flash_models = [m for m in candidates if 'flash' in m.lower()]
+        other_models = [m for m in candidates if 'flash' not in m.lower() and m.lower().startswith('gemini-')]
+
+        def sort_key(model_name: str):
+            lower = model_name.lower()
+            # プレビュー・実験用より安定版を優先 (0: 安定版, 1: プレビュー/exp)
+            is_preview = 1 if ('preview' in lower or 'exp' in lower) else 0
+            
+            # バージョン番号の抽出 (例: gemini-2.5-flash -> 2.5)
+            v_match = re.search(r'gemini-(\d+(?:\.\d+)?)', lower)
+            version = float(v_match.group(1)) if v_match else 0.0
+            
+            # -lite は標準版の後 (0: 標準, 1: lite)
+            is_lite = 1 if 'lite' in lower else 0
+            
+            # 安定版優先(0)、バージョン降順(-version)、標準版優先(0)、名前順
+            return (is_preview, -version, is_lite, model_name)
+
+        flash_models.sort(key=sort_key)
+        other_models.sort(key=sort_key)
+
+        result = flash_models + other_models
+        if result:
+            return result[:max_candidates]
+
+        return list(DEFAULT_GEMINI_MODELS[:max_candidates])
+    except Exception as e:
+        print(f"Geminiモデル一覧の動的取得中にエラーが発生しました: {e}。デフォルトモデルを使用します。")
+        return list(DEFAULT_GEMINI_MODELS[:max_candidates])
+
 
 class GeminiClient:
-    def __init__(self, api_key: str):
-        self.client = genai.Client(api_key=api_key)
-        self.models = GEMINI_MODELS
+    def __init__(self, api_key: str, models: Optional[List[str]] = None):
+        self.client = genai.Client(api_key=api_key) if api_key else None
+        if models:
+            self.models = models
+        else:
+            self.models = get_available_gemini_models(self.client)
 
     def _call_with_fallback(self, func, *args, **kwargs):
         """
         リスト内のモデルを順に試行し、成功したモデル名と結果を返す。
         429（クォータ制限）や503（高負荷）時には待機してから次のモデルを試す。
         """
+        if not self.client:
+            raise ValueError("Gemini APIキーが設定されていません。")
+
         last_exception = None
         attempt = 0
         for model_id in self.models:
@@ -35,7 +110,7 @@ class GeminiClient:
                 
                 if is_retryable:
                     attempt += 1
-                    # 429や503の場合は待機 (1秒, 2秒, 4秒...)
+                    # 429や503の場合は待機 (2秒, 4秒, 6秒...)
                     if any(code in error_msg for code in ["429", "503", "resource_exhausted", "unavailable"]):
                         wait_time = attempt * 2 
                         print(f"Model {model_id} failed (Retryable: {error_msg}). Waiting {wait_time}s before trying next...")
@@ -116,3 +191,4 @@ class GeminiClient:
             return response.text
 
         return self._call_with_fallback(_generate)
+

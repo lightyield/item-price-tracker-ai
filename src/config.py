@@ -1,15 +1,15 @@
 import os
 
 # Gemini AI Settings
-# 優先度の高い順にモデルを並べます。
-GEMINI_MODELS = [
+# デフォルトのフォールバックモデル一覧（動的モデル取得失敗時やオフライン時に使用）
+DEFAULT_GEMINI_MODELS = [
+    'gemini-2.5-flash',
+    'gemini-2.5-flash-lite',
     'gemini-2.0-flash',
     'gemini-2.0-flash-lite',
     'gemini-1.5-flash',
-    'gemini-1.5-pro',
-    'gemini-flash-latest',
-    'gemini-pro-latest',
 ]
+GEMINI_MODELS = DEFAULT_GEMINI_MODELS
 GEMINI_TEMPERATURE = 0.7
 
 IDENTIFICATION_PROMPT = """
